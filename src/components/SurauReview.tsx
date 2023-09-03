@@ -72,7 +72,7 @@ const SurauReview = () => {
           <div className="relative bg-gray-900">
             <Header />
           </div>
-          <div className="py-18 mx-auto max-w-2xl px-4 sm:py-24 sm:px-6 lg:grid lg:max-w-7xl lg:grid-cols-12 lg:gap-x-8 lg:px-8">
+          <div className="py-18 mx-auto max-w-2xl px-4 pt-10 sm:px-6 sm:pb-24 lg:grid lg:max-w-7xl lg:grid-cols-12 lg:gap-x-8 lg:px-8">
             <SkeletonLoader className="gap-2 overflow-hidden lg:col-span-4">
               <SkeletonRectangle height={24} />
               <SkeletonRectangle height={32} marginTop={4} marginBottom={8} />
