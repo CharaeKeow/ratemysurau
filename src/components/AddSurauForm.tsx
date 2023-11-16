@@ -17,7 +17,19 @@ import DistrictSelect from "./shared/DistrictSelect";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import CustomUpload from "./shared/CustomUpload";
 import clsx from "clsx";
-import {controlStyles, optionStyles, placeholderStyles, inputStyles, singleValueStyles, indicatorSeparatorStyles, dropdownIndicatorStyles, menuStyles, noOptionsStyles, clearIndicatorStyles} from '../styles/selectStyles';
+import {
+  controlStyles,
+  optionStyles,
+  placeholderStyles,
+  inputStyles,
+  singleValueStyles,
+  indicatorSeparatorStyles,
+  dropdownIndicatorStyles,
+  menuStyles,
+  noOptionsStyles,
+  clearIndicatorStyles,
+} from "../styles/selectStyles";
+import StarRating from "./shared/StarRating";
 
 const Select = dynamic(() => import("react-select"), {
   ssr: true,
@@ -67,12 +79,19 @@ const AddSurauForm: FC<AddSurauFormProps> = ({ setOpen }) => {
   const [uploadCompleted, setUploadCompleted] = useState(false);
   const [uploadAlert, setUploadAlert] = useState(false);
 
+  // initial review
+  const [isAddInitialReview, setIsAddInitialReview] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [ratingError, setRatingError] = useState("");
+  const [review, setReview] = useState("");
+
   const mall = api.surau.getMallOnDistrict.useQuery({
     district_id: choosenDistrict,
     state_id: choosenState,
   });
 
   const addSurau = api.surau.addSurau.useMutation();
+  const addRating = api.rate.addRating.useMutation();
 
   useEffect(() => {
     if (!tempImageList?.fileUrls) return;
@@ -136,7 +155,6 @@ const AddSurauForm: FC<AddSurauFormProps> = ({ setOpen }) => {
   };
 
   const handleDeleteImage = (id: string) => {
-
     setFilePath((prev) => {
       const updatedFilePath = prev.filter((file) => file.file_path !== id);
       return updatedFilePath;
@@ -161,6 +179,10 @@ const AddSurauForm: FC<AddSurauFormProps> = ({ setOpen }) => {
   const handleMallChange = (e: any) => {
     if (e === null) return;
     setMallData(e.id);
+  };
+
+  const handleRatingChange = (newRating: number) => {
+    setRating(newRating);
   };
 
   const handleSubmit = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -208,6 +230,11 @@ const AddSurauForm: FC<AddSurauFormProps> = ({ setOpen }) => {
       }
     }
 
+    if (isAddInitialReview && !rating) {
+      setRatingError("Please select a rating");
+      return;
+    }
+
     addSurau
       .mutateAsync({
         name: surauName,
@@ -225,8 +252,20 @@ const AddSurauForm: FC<AddSurauFormProps> = ({ setOpen }) => {
           degree: qiblatDegree,
         },
       })
-      .then(() => {
+      .then((res) => {
         setAlertModalOpen(true);
+
+        addRating
+          .mutateAsync({
+            rating: rating,
+            image: [], // no need to insert image since submission form already have it
+            review: review,
+            surau_id: res.id,
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+
         setTimeout(() => {
           setAlertModalOpen(false);
           setOpen(false);
@@ -503,7 +542,7 @@ const AddSurauForm: FC<AddSurauFormProps> = ({ setOpen }) => {
                 </div>
                 <div>
                   {uploadCompleted ? (
-                    <p className="text-xs italic text-green-500 text-center">
+                    <p className="text-center text-xs italic text-green-500">
                       Upload completed
                     </p>
                   ) : (
@@ -518,7 +557,6 @@ const AddSurauForm: FC<AddSurauFormProps> = ({ setOpen }) => {
                       {/* This custom uploader return uploaded file on success */}
                     </>
                   )}
-                  
                 </div>
 
                 <div className="">
@@ -578,6 +616,80 @@ const AddSurauForm: FC<AddSurauFormProps> = ({ setOpen }) => {
                   <p className="text-xs italic text-red-500">
                     {thumbnailError}
                   </p>
+                ) : null}
+
+                {/* inital review */}
+                <div className="mt-4 max-w-lg space-y-4">
+                  <div className="relative flex items-start">
+                    <div className="flex h-6 items-center">
+                      <input
+                        id="check-add-inital-review"
+                        name="check-add-initial-review"
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border text-indigo-600 focus:ring-indigo-600"
+                        onChange={(e) =>
+                          setIsAddInitialReview(e.target.checked)
+                        }
+                      />
+                    </div>
+                    <div className="ml-3 text-sm leading-6">
+                      <p className="italic text-gray-500">
+                        Would you like to share your experience (optional)?
+                        {/* 
+                        alt: Rate and review this surau now
+                        alt: Tell us about your visit (optional)
+                        alt: Share your surau experience */}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {isAddInitialReview ? (
+                  <div>
+                    <h3 className="text-lg font-medium leading-6 text-primary-foreground">
+                      Review
+                    </h3>
+                    <p>Review this {surauName} surau inshaAllah</p>
+
+                    <div className="mt-4 md:col-span-2 md:mt-0">
+                      <div className="shadow sm:overflow-hidden sm:rounded-md">
+                        <div className="flex items-center justify-center pt-4">
+                          <StarRating
+                            handleRatingChange={handleRatingChange}
+                            rating={rating}
+                          />
+                        </div>
+                        {ratingError ? (
+                          <p className="text-center text-xs text-red-500">
+                            {ratingError}
+                          </p>
+                        ) : null}
+                        <div className="space-y-6 bg-background px-4 py-5 sm:p-6">
+                          <div>
+                            <label
+                              htmlFor="about"
+                              className="block text-sm font-medium text-gray-700"
+                            ></label>
+                            <div className="mt-1">
+                              <textarea
+                                name="about"
+                                id="about"
+                                rows={3}
+                                className="mt-1 block w-full rounded-md border-border bg-input text-input-foreground shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                defaultValue={""}
+                                onChange={(e) => {
+                                  setReview(e.target.value);
+                                }}
+                              />
+                            </div>
+                            <p className="mt-2 text-sm text-gray-500">
+                              Add your honest review about this surau and also
+                              any improvement that can be made.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ) : null}
               </div>
               <div className="flex flex-row items-end justify-end gap-2 bg-gray-50 px-4 py-3 text-right dark:bg-gray-800 sm:px-6">
